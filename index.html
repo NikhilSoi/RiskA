@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Startup Risk Assessment Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // Game State
+        let state = {
+            teams: [],
+            gameStarted: false,
+            baseValuation: 5000000,
+            selectedTeamIndex: 0,
+            showResults: false
+        };
+
+        const riskFactors = [
+            { id: 1, name: "Management Team", description: "Experience, track record, and capability of founders", icon: "👥" },
+            { id: 2, name: "Product/Technology", description: "Innovation, development stage, and technical feasibility", icon: "📦" },
+            { id: 3, name: "Market Size", description: "Total addressable market and growth potential", icon: "🌍" },
+            { id: 4, name: "Competition", description: "Competitive landscape and barriers to entry", icon: "🎯" },
+            { id: 5, name: "Marketing/Sales", description: "Go-to-market strategy and customer acquisition", icon: "📈" },
+            { id: 6, name: "Funding/Capital", description: "Runway, burn rate, and capital efficiency", icon: "💰" },
+            { id: 7, name: "Stage of Business", description: "Maturity, traction, and proof of concept", icon: "📊" },
+            { id: 8, name: "Legal/IP Risk", description: "Patents, regulatory compliance, and legal issues", icon: "🛡️" },
+            { id: 9, name: "Production Risk", description: "Manufacturing, supply chain, and scalability", icon: "⚡" },
+            { id: 10, name: "Political/Regulatory", description: "Government regulations and policy changes", icon: "⚠️" },
+            { id: 11, name: "Exit Strategy", description: "Potential acquisition targets or IPO viability", icon: "🏆" },
+            { id: 12, name: "Revenue Model", description: "Clarity and sustainability of monetization", icon: "💵" }
+        ];
+
+        function addTeam() {
+            const input = document.getElementById('teamInput');
+            const teamName = input.value.trim();
+            
+            if (teamName) {
+                state.teams.push({
+                    name: teamName,
+                    ratings: riskFactors.map(factor => ({ 
+                        factorId: factor.id, 
+                        rating: 0, 
+                        justification: '' 
+                    })),
+                    totalAdjustment: 0,
+                    finalValuation: state.baseValuation
+                });
+                input.value = '';
+                render();
+            }
+        }
+
+        function startGame() {
+            if (state.teams.length > 0) {
+                state.gameStarted = true;
+                render();
+            }
+        }
+
+        function rollDice(teamIndex, factorIndex) {
+            const roll = Math.floor(Math.random() * 5) - 2;
+            updateRating(teamIndex, factorIndex, roll);
+        }
+
+        function updateRating(teamIndex, factorIndex, value) {
+            state.teams[teamIndex].ratings[factorIndex].rating = value;
+            calculateValuation(teamIndex);
+            render();
+        }
+
+        function updateJustification(teamIndex, factorIndex, text) {
+            state.teams[teamIndex].ratings[factorIndex].justification = text;
+        }
+
+        function calculateValuation(teamIndex) {
+            const team = state.teams[teamIndex];
+            const totalAdjustment = team.ratings.reduce((sum, r) => sum + r.rating, 0);
+            const adjustmentPercentage = totalAdjustment * 5;
+            const finalValuation = state.baseValuation * (1 + adjustmentPercentage / 100);
+            
+            team.totalAdjustment = adjustmentPercentage;
+            team.finalValuation = finalValuation;
+        }
+
+        function getRatingColor(rating) {
+            if (rating >= 1) return 'text-green-600 bg-green-50';
+            if (rating <= -1) return 'text-red-600 bg-red-50';
+            return 'text-gray-600 bg-gray-50';
+        }
+
+        function getRatingLabel(rating) {
+            const labels = {
+                '-2': 'High Risk',
+                '-1': 'Some Risk',
+                '0': 'Neutral',
+                '1': 'Low Risk',
+                '2': 'Very Low Risk'
+            };
+            return labels[rating] || 'Neutral';
+        }
+
+        function formatMoney(value) {
+            return (value / 1000000).toFixed(2);
+        }
+
+        function renderSetup() {
+            return `
+                <div class="min-h-screen p-8">
+                    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 fade-in">
+                        <div class="text-center mb-8">
+                            <h1 class="text-4xl font-bold text-indigo-900 mb-2">🚀 Startup Risk Assessment Game</h1>
+                            <p class="text-gray-600">Evaluate startup risk factors and calculate adjusted valuations</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Base Valuation ($)
+                            </label>
+                            <input
+                                type="number"
+                                id="baseValuationInput"
+                                value="${state.baseValuation}"
+                                onchange="state.baseValuation = Number(this.value); render();"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="5000000"
+                            />
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Add Teams
+                            </label>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    id="teamInput"
+                                    onkeypress="if(event.key === 'Enter') addTeam()"
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    placeholder="Team name"
+                                />
+                                <button
+                                    onclick="addTeam()"
+                                    class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
+                        ${state.teams.length > 0 ? `
+                            <div class="mb-6">
+                                <h3 class="font-semibold text-gray-700 mb-2">Teams (${state.teams.length}):</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${state.teams.map(team => `
+                                        <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
+                                            ${team.name}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <button
+                            onclick="startGame()"
+                            ${state.teams.length === 0 ? 'disabled' : ''}
+                            class="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                            Start Game
+                        </button>
+
+                        <div class="mt-8 p-4 bg-blue-50 rounded-lg">
+                            <h3 class="font-semibold text-blue-900 mb-2">📋 How to Play:</h3>
+                            <ul class="text-sm text-blue-800 space-y-1">
+                                <li>• Each team evaluates 12 risk factors for their chosen startup</li>
+                                <li>• Roll dice (or manually set) ratings from -2 (high risk) to +2 (low risk)</li>
+                                <li>• Justify each rating with evidence from research</li>
+                                <li>• Each point adjusts valuation by ±5%</li>
+                                <li>• Present findings and defend your analysis</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResults() {
+            return `
+                <div class="bg-white rounded-xl shadow-lg p-6 fade-in">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">🏆 Final Results</h2>
+                    <div class="space-y-4">
+                        ${state.teams.map((team, idx) => `
+                            <div class="border rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-xl font-bold text-gray-800">${team.name}</h3>
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-600">Total Adjustment</div>
+                                        <div class="text-2xl font-bold ${team.totalAdjustment >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                            ${team.totalAdjustment > 0 ? '+' : ''}${team.totalAdjustment.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Base Valuation:</span>
+                                        <span class="ml-2 font-semibold">$${formatMoney(state.baseValuation)}M</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Adjusted Valuation:</span>
+                                        <span class="ml-2 font-semibold text-indigo-600">$${formatMoney(team.finalValuation)}M</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGame() {
+            const currentTeam = state.teams[state.selectedTeamIndex];
+            
+            return `
+                <div class="min-h-screen p-8">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <div class="flex justify-between items-center flex-wrap gap-4">
+                                <h1 class="text-3xl font-bold text-indigo-900">🎲 Risk Assessment Board</h1>
+                                <button
+                                    onclick="state.showResults = !state.showResults; render();"
+                                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                >
+                                    ${state.showResults ? 'Hide Results' : 'Show Results'}
+                                </button>
+                            </div>
+                            
+                            <div class="mt-4 flex gap-2 flex-wrap">
+                                ${state.teams.map((team, idx) => `
+                                    <button
+                                        onclick="state.selectedTeamIndex = ${idx}; render();"
+                                        class="px-4 py-2 rounded-lg font-semibold transition ${
+                                            state.selectedTeamIndex === idx
+                                                ? 'bg-indigo-600 text-white'
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        }"
+                                    >
+                                        ${team.name}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        ${state.showResults ? renderResults() : `
+                            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                                <div class="grid grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <div class="text-sm text-gray-600">Base Valuation</div>
+                                        <div class="text-2xl font-bold text-gray-900">$${formatMoney(state.baseValuation)}M</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-600">Total Adjustment</div>
+                                        <div class="text-2xl font-bold ${currentTeam.totalAdjustment >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                            ${currentTeam.totalAdjustment > 0 ? '+' : ''}${currentTeam.totalAdjustment.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-600">Final Valuation</div>
+                                        <div class="text-2xl font-bold text-indigo-600">$${formatMoney(currentTeam.finalValuation)}M</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-4">
+                                ${riskFactors.map((factor, factorIdx) => {
+                                    const rating = currentTeam.ratings[factorIdx];
+                                    return `
+                                        <div class="bg-white rounded-xl shadow-lg p-6 fade-in">
+                                            <div class="flex items-start gap-4">
+                                                <div class="text-4xl">${factor.icon}</div>
+                                                
+                                                <div class="flex-1">
+                                                    <h3 class="text-lg font-bold text-gray-900 mb-1">${factor.name}</h3>
+                                                    <p class="text-sm text-gray-600 mb-3">${factor.description}</p>
+                                                    
+                                                    <div class="flex items-center gap-4 mb-3 flex-wrap">
+                                                        <button
+                                                            onclick="rollDice(${state.selectedTeamIndex}, ${factorIdx})"
+                                                            class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                                                        >
+                                                            🎲 Roll Dice
+                                                        </button>
+                                                        
+                                                        <div class="flex gap-1">
+                                                            ${[-2, -1, 0, 1, 2].map(val => `
+                                                                <button
+                                                                    onclick="updateRating(${state.selectedTeamIndex}, ${factorIdx}, ${val})"
+                                                                    class="w-10 h-10 rounded font-semibold transition ${
+                                                                        rating.rating === val
+                                                                            ? getRatingColor(val) + ' ring-2 ring-indigo-500'
+                                                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                                    }"
+                                                                >
+                                                                    ${val > 0 ? '+' : ''}${val}
+                                                                </button>
+                                                            `).join('')}
+                                                        </div>
+                                                        
+                                                        <span class="px-3 py-1 rounded-full text-sm font-semibold ${getRatingColor(rating.rating)}">
+                                                            ${getRatingLabel(rating.rating)}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <textarea
+                                                        onchange="updateJustification(${state.selectedTeamIndex}, ${factorIdx}, this.value)"
+                                                        placeholder="Justify this rating with evidence from your startup research..."
+                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                                                        rows="2"
+                                                    >${rating.justification}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = state.gameStarted ? renderGame() : renderSetup();
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
